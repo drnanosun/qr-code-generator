@@ -1,0 +1,298 @@
+:root {
+  --ink: #263238;
+  --muted: #6b7280;
+  --line: rgba(38, 50, 56, 0.12);
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(216, 243, 220, 0.92), transparent 32rem),
+    radial-gradient(circle at bottom right, rgba(255, 221, 232, 0.9), transparent 34rem),
+    linear-gradient(135deg, #f8fbff 0%, #fff7f1 45%, #f4fbf8 100%);
+  font-family: "Prompt", Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 24px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.editor-panel,
+.preview-panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 80px rgba(70, 82, 96, 0.14);
+}
+
+.editor-panel {
+  display: grid;
+  gap: 24px;
+  padding: 28px;
+  border-radius: 8px;
+}
+
+.preview-panel {
+  position: sticky;
+  top: 32px;
+  display: grid;
+  align-self: start;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 8px;
+}
+
+.intro p {
+  margin: 0 0 8px;
+  color: #55706d;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  max-width: 720px;
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.segmented button,
+.export-row button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--ink);
+  background: transparent;
+  font-weight: 800;
+}
+
+.segmented button.active {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(70, 82, 96, 0.12);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: #40535a;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.86);
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(71, 106, 111, 0.55);
+  box-shadow: 0 0 0 4px rgba(71, 106, 111, 0.12);
+}
+
+.check-row {
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  align-self: end;
+  min-height: 46px;
+}
+
+.check-row input {
+  min-height: auto;
+}
+
+.style-tools {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr;
+  gap: 18px;
+  padding-top: 6px;
+}
+
+.style-tools > label {
+  grid-column: 1 / -1;
+}
+
+.style-tools h2 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 44px);
+  gap: 10px;
+}
+
+.swatches button {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 6px 18px rgba(70, 82, 96, 0.14);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.color-grid input {
+  min-height: 46px;
+  padding: 4px;
+}
+
+.qr-preview {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  overflow: hidden;
+}
+
+.qr-svg,
+.qr-svg svg {
+  display: block;
+  width: min(100%, 560px);
+  height: auto;
+}
+
+.qr-preview p,
+.hint {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.export-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.export-row button {
+  color: #ffffff;
+  background: #476a6f;
+}
+
+.export-row button:nth-child(2) {
+  color: #314c50;
+  background: #d8f3dc;
+}
+
+.export-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.hint {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding: 20px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .editor-panel,
+  .preview-panel {
+    padding: 18px;
+  }
+
+  .segmented,
+  .form-grid,
+  .style-tools,
+  .color-grid,
+  .export-row {
+    grid-template-columns: 1fr;
+  }
+
+  .swatches {
+    grid-template-columns: repeat(3, 44px);
+  }
+}
