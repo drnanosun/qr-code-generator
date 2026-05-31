@@ -91,9 +91,9 @@ button {
   letter-spacing: 0;
 }
 
+.mode-switch,
 .segmented {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   padding: 6px;
   border: 1px solid var(--line);
@@ -101,6 +101,15 @@ button {
   background: rgba(255, 255, 255, 0.52);
 }
 
+.mode-switch {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.segmented {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mode-switch button,
 .segmented button,
 .export-row button {
   min-height: 44px;
@@ -111,6 +120,7 @@ button {
   font-weight: 800;
 }
 
+.mode-switch button.active,
 .segmented button.active {
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(70, 82, 96, 0.12);
@@ -285,6 +295,7 @@ textarea:focus {
   }
 
   .segmented,
+  .mode-switch,
   .form-grid,
   .style-tools,
   .color-grid,

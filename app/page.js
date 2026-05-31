@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import JsBarcode from "jsbarcode";
 import * as QRCode from "qrcode";
+
+const modes = [
+  { id: "qr", label: "QR Code" },
+  { id: "barcode", label: "Barcode" },
+];
 
 const contentTypes = [
   { id: "url", label: "URL" },
@@ -31,10 +37,22 @@ const defaultForms = {
     organization: "Pastel Studio",
     website: "https://example.com",
   },
+  barcode: {
+    value: "8851234567890",
+    showText: true,
+  },
 };
 
 function escapeWifi(value) {
   return value.replace(/([\\;,":])/g, "\\$1");
+}
+
+function escapeSvg(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function buildPayload(type, forms) {
@@ -103,16 +121,12 @@ function qrMatrixSvg(payload, settings) {
 </svg>`.trim();
 }
 
-function frameSvg(qrSvg, settings) {
+function frameQrSvg(qrSvg, settings) {
   const size = 920;
   const qrSize = 620;
   const qrX = (size - qrSize) / 2;
   const qrY = 160;
-  const text = settings.frameText.trim();
-  const safeText = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  const safeText = escapeSvg(settings.frameText.trim());
 
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
@@ -133,7 +147,68 @@ function frameSvg(qrSvg, settings) {
 </svg>`.trim();
 }
 
+function barcodeRects(bits, x, y, width, height) {
+  const moduleWidth = width / bits.length;
+  const rects = [];
+  let start = null;
+
+  for (let index = 0; index <= bits.length; index += 1) {
+    const isBar = bits[index] === "1";
+    if (isBar && start === null) start = index;
+    if ((!isBar || index === bits.length) && start !== null) {
+      const barWidth = (index - start) * moduleWidth;
+      rects.push(`<rect x="${x + start * moduleWidth}" y="${y}" width="${barWidth}" height="${height}" />`);
+      start = null;
+    }
+  }
+
+  return rects.join("\n    ");
+}
+
+function barcodeSvg(value, settings, barcodeSettings) {
+  const cleanValue = value.trim();
+  if (!cleanValue) throw new Error("Barcode value is required");
+  if (cleanValue.length > 80) throw new Error("Barcode value is too long");
+
+  const barcode = {};
+  JsBarcode(barcode, cleanValue, {
+    format: "CODE128",
+    displayValue: barcodeSettings.showText,
+  });
+
+  const bits = barcode.encodings.map((encoding) => encoding.data).join("");
+  const size = 920;
+  const barX = 110;
+  const barY = 320;
+  const barWidth = 700;
+  const barHeight = 250;
+  const safeText = escapeSvg(settings.frameText.trim());
+  const safeValue = escapeSvg(cleanValue);
+
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="54" fill="${settings.background}" />
+  <rect x="58" y="58" width="${size - 116}" height="${size - 116}" rx="42" fill="none" stroke="${settings.foreground}" stroke-width="18" opacity="0.22" />
+  ${
+    safeText
+      ? `<text x="${size / 2}" y="122" text-anchor="middle" font-family="Prompt, Arial, sans-serif" font-size="40" font-weight="800" fill="${settings.foreground}">${safeText}</text>`
+      : ""
+  }
+  <rect x="82" y="248" width="756" height="424" rx="34" fill="#ffffff" opacity="0.82" />
+  <g fill="${settings.foreground}" shape-rendering="crispEdges">
+    ${barcodeRects(bits, barX, barY, barWidth, barHeight)}
+  </g>
+  ${
+    barcodeSettings.showText
+      ? `<text x="${size / 2}" y="640" text-anchor="middle" font-family="Prompt, Arial, sans-serif" font-size="40" font-weight="700" fill="${settings.foreground}">${safeValue}</text>`
+      : ""
+  }
+  <text x="${size / 2}" y="802" text-anchor="middle" font-family="Prompt, Arial, sans-serif" font-size="28" font-weight="700" fill="${settings.foreground}" opacity="0.68">CODE128 Barcode</text>
+</svg>`.trim();
+}
+
 export default function Home() {
+  const [mode, setMode] = useState("qr");
   const [type, setType] = useState("url");
   const [forms, setForms] = useState(defaultForms);
   const [settings, setSettings] = useState({
@@ -144,21 +219,36 @@ export default function Home() {
   });
 
   const payload = useMemo(() => buildPayload(type, forms), [type, forms]);
-  const qrResult = useMemo(() => {
-    if (!payload.trim()) {
-      return { svg: "", status: "ใส่ข้อมูลก่อนสร้าง QR" };
-    }
-
+  const result = useMemo(() => {
     try {
+      if (mode === "barcode") {
+        return {
+          svg: barcodeSvg(forms.barcode.value, settings, forms.barcode),
+          status: "",
+          filename: "pastel-barcode",
+        };
+      }
+
+      if (!payload.trim()) {
+        return { svg: "", status: "ใส่ข้อมูลก่อนสร้าง QR", filename: "pastel-qr" };
+      }
+
       const qrSvg = qrMatrixSvg(payload, settings);
-      return { svg: frameSvg(qrSvg, settings), status: "" };
+      return { svg: frameQrSvg(qrSvg, settings), status: "", filename: "pastel-qr" };
     } catch (error) {
+      const messages = {
+        "Payload is too long": "ข้อมูล QR ยาวเกินไป กรุณาลดความยาวให้ไม่เกิน 1,200 ตัวอักษร",
+        "Barcode value is required": "ใส่ข้อมูลก่อนสร้างบาร์โค้ด",
+        "Barcode value is too long": "ข้อมูลบาร์โค้ดยาวเกินไป กรุณาลดความยาวให้ไม่เกิน 80 ตัวอักษร",
+      };
+
       return {
         svg: "",
-        status: error.message === "Payload is too long" ? "ข้อมูลยาวเกินไป กรุณาลดความยาวให้ไม่เกิน 1,200 ตัวอักษร" : "สร้าง QR ไม่สำเร็จ",
+        status: messages[error.message] ?? "สร้างโค้ดไม่สำเร็จ",
+        filename: mode === "barcode" ? "pastel-barcode" : "pastel-qr",
       };
     }
-  }, [payload, settings]);
+  }, [forms.barcode, mode, payload, settings]);
 
   function updateForm(section, field, value) {
     setForms((current) => ({
@@ -179,21 +269,20 @@ export default function Home() {
   }
 
   function downloadSvg() {
-    if (!qrResult.svg) return;
-    const blob = new Blob([qrResult.svg], { type: "image/svg+xml" });
+    if (!result.svg) return;
+    const blob = new Blob([result.svg], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "pastel-qr.svg";
+    link.download = `${result.filename}.svg`;
     link.click();
     URL.revokeObjectURL(url);
   }
 
   async function downloadPng() {
-    if (!qrResult.svg) return;
+    if (!result.svg) return;
     const image = new Image();
-    const dataUri = svgToDataUri(qrResult.svg);
-    image.src = dataUri;
+    image.src = svgToDataUri(result.svg);
     await image.decode();
 
     const canvas = document.createElement("canvas");
@@ -204,7 +293,7 @@ export default function Home() {
 
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
-    link.download = "pastel-qr.png";
+    link.download = `${result.filename}.png`;
     link.click();
   }
 
@@ -213,16 +302,16 @@ export default function Home() {
       <section className="workspace">
         <div className="editor-panel">
           <div className="intro">
-            <p>QR Code Generator</p>
-            <h1>สร้าง QR code สีพาสเทลพร้อมกรอบข้อความ</h1>
+            <p>QR & Barcode Generator</p>
+            <h1>สร้าง QR code และบาร์โค้ดสีพาสเทลพร้อมกรอบข้อความ</h1>
           </div>
 
-          <div className="segmented" aria-label="QR content type">
-            {contentTypes.map((item) => (
+          <div className="mode-switch" aria-label="Code mode">
+            {modes.map((item) => (
               <button
                 key={item.id}
-                className={type === item.id ? "active" : ""}
-                onClick={() => setType(item.id)}
+                className={mode === item.id ? "active" : ""}
+                onClick={() => setMode(item.id)}
                 type="button"
               >
                 {item.label}
@@ -230,8 +319,44 @@ export default function Home() {
             ))}
           </div>
 
+          {mode === "qr" && (
+            <div className="segmented" aria-label="QR content type">
+              {contentTypes.map((item) => (
+                <button
+                  key={item.id}
+                  className={type === item.id ? "active" : ""}
+                  onClick={() => setType(item.id)}
+                  type="button"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="form-grid">
-            {type === "url" && (
+            {mode === "barcode" && (
+              <>
+                <label>
+                  Barcode value
+                  <input
+                    value={forms.barcode.value}
+                    onChange={(event) => updateForm("barcode", "value", event.target.value)}
+                    placeholder="8851234567890"
+                  />
+                </label>
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={forms.barcode.showText}
+                    onChange={(event) => updateForm("barcode", "showText", event.target.checked)}
+                  />
+                  Show text under barcode
+                </label>
+              </>
+            )}
+
+            {mode === "qr" && type === "url" && (
               <label>
                 URL
                 <input
@@ -242,7 +367,7 @@ export default function Home() {
               </label>
             )}
 
-            {type === "text" && (
+            {mode === "qr" && type === "text" && (
               <label>
                 Text
                 <textarea
@@ -254,7 +379,7 @@ export default function Home() {
               </label>
             )}
 
-            {type === "wifi" && (
+            {mode === "qr" && type === "wifi" && (
               <>
                 <label>
                   Network name
@@ -283,7 +408,7 @@ export default function Home() {
               </>
             )}
 
-            {type === "vcard" && (
+            {mode === "qr" && type === "vcard" && (
               <>
                 <label>
                   First name
@@ -359,21 +484,21 @@ export default function Home() {
 
         <aside className="preview-panel">
           <div className="qr-preview">
-            {qrResult.svg ? (
-              <div className="qr-svg" aria-label="Generated QR code" dangerouslySetInnerHTML={{ __html: qrResult.svg }} />
+            {result.svg ? (
+              <div className="qr-svg" aria-label="Generated code preview" dangerouslySetInnerHTML={{ __html: result.svg }} />
             ) : (
-              <p>{qrResult.status}</p>
+              <p>{result.status}</p>
             )}
           </div>
           <div className="export-row">
-            <button type="button" onClick={downloadPng} disabled={!qrResult.svg}>
+            <button type="button" onClick={downloadPng} disabled={!result.svg}>
               Export PNG
             </button>
-            <button type="button" onClick={downloadSvg} disabled={!qrResult.svg}>
+            <button type="button" onClick={downloadSvg} disabled={!result.svg}>
               Export SVG
             </button>
           </div>
-          <p className="hint">รองรับ URL, ข้อความ, WiFi และ vCard พร้อม export ไฟล์ที่มีกรอบข้อความครบถ้วน</p>
+          <p className="hint">รองรับ QR สำหรับ URL, ข้อความ, WiFi, vCard และบาร์โค้ด CODE128 พร้อม export ไฟล์ครบถ้วน</p>
         </aside>
       </section>
     </main>
