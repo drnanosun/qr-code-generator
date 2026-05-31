@@ -16,6 +16,13 @@ const contentTypes = [
   { id: "vcard", label: "vCard" },
 ];
 
+const qrErrorCorrectionLevels = [
+  { id: "L", label: "Low (L)" },
+  { id: "M", label: "Medium (M)" },
+  { id: "Q", label: "Quartile (Q)" },
+  { id: "H", label: "High (H)" },
+];
+
 const palettes = [
   { name: "Mint", fg: "#476A6F", bg: "#D8F3DC" },
   { name: "Peach", fg: "#7C5E4F", bg: "#FFE5D9" },
@@ -96,7 +103,7 @@ function qrMatrixSvg(payload, settings) {
     throw new Error("Payload is too long");
   }
 
-  const qr = QRCode.create(payload, { errorCorrectionLevel: "H" });
+  const qr = QRCode.create(payload, { errorCorrectionLevel: settings.errorCorrectionLevel });
   const margin = 2;
   const totalCells = qr.modules.size + margin * 2;
   const cellSize = settings.qrBaseSize / totalCells;
@@ -214,6 +221,7 @@ export default function Home() {
   const [settings, setSettings] = useState({
     foreground: "#476A6F",
     background: "#D8F3DC",
+    errorCorrectionLevel: "H",
     frameText: "SCAN ME",
     qrBaseSize: 512,
   });
@@ -306,7 +314,7 @@ export default function Home() {
             <h1>สร้าง QR code และบาร์โค้ดสีพาสเทลพร้อมกรอบข้อความ</h1>
           </div>
 
-          <div className="mode-switch" aria-label="Code mode">
+          <div className="mode-switch" aria-label="Code mode" style={{ "--accent": settings.foreground, "--accent-soft": settings.background }}>
             {modes.map((item) => (
               <button
                 key={item.id}
@@ -320,7 +328,7 @@ export default function Home() {
           </div>
 
           {mode === "qr" && (
-            <div className="segmented" aria-label="QR content type">
+            <div className="segmented" aria-label="QR content type" style={{ "--accent": settings.foreground, "--accent-soft": settings.background }}>
               {contentTypes.map((item) => (
                 <button
                   key={item.id}
@@ -469,6 +477,22 @@ export default function Home() {
                 />
               </label>
             </div>
+
+            {mode === "qr" && (
+              <label>
+                QR encoding
+                <select
+                  value={settings.errorCorrectionLevel}
+                  onChange={(event) => setSettings((current) => ({ ...current, errorCorrectionLevel: event.target.value }))}
+                >
+                  {qrErrorCorrectionLevels.map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label>
               Frame text
